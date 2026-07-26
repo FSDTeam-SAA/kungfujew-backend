@@ -35,9 +35,10 @@ async function bootstrap() {
   const enableSwagger = process.env.ENABLE_SWAGGER !== 'false'; // Default to true
 
   app.enableCors({
-    origin: true,
+    origin: '*',
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    credentials: true,
+    allowedHeaders: '*',
+    credentials: false,
   });
 
   // Security middleware - helmet helps secure Express apps by setting HTTP response headers
