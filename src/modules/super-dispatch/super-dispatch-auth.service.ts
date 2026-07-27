@@ -1,4 +1,4 @@
-import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -15,6 +15,7 @@ interface TokenResponse {
 
 @Injectable()
 export class SuperDispatchAuthService implements OnModuleInit {
+  private readonly logger = new Logger(SuperDispatchAuthService.name);
   private readonly tokenUrl: string;
   private readonly clientId: string;
   private readonly clientSecret: string;
@@ -37,6 +38,13 @@ export class SuperDispatchAuthService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
+    if (!this.hasCredentials()) {
+      this.logger.warn(
+        'Super Dispatch credentials are not configured; token refresh will be skipped until credentials are provided.',
+      );
+      return;
+    }
+
     await this.getAccessToken();
   }
 
@@ -59,6 +67,12 @@ export class SuperDispatchAuthService implements OnModuleInit {
   }
 
   private async fetchNewToken(): Promise<string> {
+    if (!this.hasCredentials()) {
+      throw new Error(
+        'Super Dispatch credentials are not configured. Set SUPER_DISPATCH_CLIENT_ID and SUPER_DISPATCH_CLIENT_SECRET.',
+      );
+    }
+
     const credentials = Buffer.from(
       `${this.clientId}:${this.clientSecret}`,
     ).toString('base64');
@@ -90,6 +104,10 @@ export class SuperDispatchAuthService implements OnModuleInit {
     );
 
     return access_token;
+  }
+
+  private hasCredentials(): boolean {
+    return Boolean(this.clientId && this.clientSecret);
   }
 
   async invalidateToken(): Promise<void> {
