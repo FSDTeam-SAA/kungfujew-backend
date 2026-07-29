@@ -22,7 +22,6 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { GoogleOAuthService } from './services/google-oauth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -45,7 +44,6 @@ import {
 } from './dto/session.dto';
 import type { Request, Response } from 'express';
 import { CustomLoggerService } from '../../common/services/custom-logger.service';
-import { THROTTLER_CONFIG } from '../../common/config/throttler.config';
 import { AuthGuard } from '../../common/guards/auth.guard';
 
 @ApiTags('auth')
@@ -57,8 +55,7 @@ export class AuthController {
     private readonly customLogger: CustomLoggerService,
   ) {}
 
-  // Strict rate limit for registration: 5 requests per 15 minutes
-  @ApiOperation({
+    @ApiOperation({
     summary: 'Register a customer account',
     description:
       'Creates a local customer account, stores security metadata, and queues an email verification code.',
@@ -91,7 +88,6 @@ export class AuthController {
   @ApiForbiddenResponse({
     description: 'Public registration as an administrator is blocked.',
   })
-  @Throttle({ default: THROTTLER_CONFIG.AUTH })
   @Post('register')
   async create(@Body() payload: CreateAuthDto, @Req() req: Request) {
     this.customLogger.log(
@@ -143,7 +139,6 @@ export class AuthController {
   @ApiBadRequestResponse({
     description: 'Verification code is invalid, expired, or already used.',
   })
-  @Throttle({ default: THROTTLER_CONFIG.AUTH })
   @Post('verify-email')
   async verifyEmail(
     @Body() verifyEmailDto: VerifyEmailDto,
@@ -182,7 +177,6 @@ export class AuthController {
   @ApiBadRequestResponse({
     description: 'Email is already verified or the resend request failed.',
   })
-  @Throttle({ default: THROTTLER_CONFIG.AUTH })
   @Post('resend-verification')
   async resendVerification(
     @Body() resendVerificationDto: ResendVerificationDto,
@@ -217,7 +211,6 @@ export class AuthController {
   })
   @ApiOkResponse({ description: 'Password reset OTP request accepted.' })
   @ApiBadRequestResponse({ description: 'Invalid email or reset request.' })
-  @Throttle({ default: THROTTLER_CONFIG.AUTH })
   @Post('forgot-password')
   async forgotPassword(
     @Body() forgotPasswordDto: ForgotPasswordDto,
@@ -244,7 +237,6 @@ export class AuthController {
   })
   @ApiOkResponse({ description: 'Password reset OTP verified successfully.' })
   @ApiBadRequestResponse({ description: 'Invalid or expired reset OTP.' })
-  @Throttle({ default: THROTTLER_CONFIG.AUTH })
   @Post('verify-reset-otp')
   async verifyResetOtp(@Body() verifyOtpDto: VerifyResetOtpDto) {
     this.customLogger.log(
@@ -269,7 +261,6 @@ export class AuthController {
   @ApiBadRequestResponse({
     description: 'Invalid reset token or password policy failure.',
   })
-  @Throttle({ default: THROTTLER_CONFIG.AUTH })
   @Post('reset-password')
   async resetPassword(
     @Body() resetPasswordDto: ResetPasswordDto,
@@ -534,7 +525,6 @@ export class AuthController {
   /**
    * Login with email and password
    */
-  // Strict rate limit for login: 5 requests per 15 minutes per IP
   @ApiOperation({
     summary: 'Login with email and password',
     description:
@@ -566,7 +556,6 @@ export class AuthController {
   @ApiForbiddenResponse({
     description: 'Email is unverified or account access is blocked.',
   })
-  @Throttle({ default: THROTTLER_CONFIG.AUTH })
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Req() req: Request) {
     const { email, password } = loginDto;
@@ -709,7 +698,6 @@ export class AuthController {
     description: 'Invalid old password or new password.',
   })
   @UseGuards(AuthGuard)
-  @Throttle({ default: THROTTLER_CONFIG.AUTH })
   @Post('change-password')
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDto,

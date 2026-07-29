@@ -7,7 +7,6 @@ import { UserModule } from './modules/user/user.module';
 import { ContactModule } from './modules/contact/contact.module';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './common/modules/redis.module';
-import { RateLimitModule } from './common/modules/rate-limit.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './common/config/winston.config';
@@ -21,8 +20,6 @@ import { QuickBooksModule } from './modules/quickbooks/quickbooks.module';
 import { CarrierModule } from './modules/carrier/carrier.module';
 import { ScheduledTasksModule } from './modules/scheduled-tasks/scheduled-tasks.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
-
-const isRateLimitEnabled = process.env.NODE_ENV !== 'development';
 
 @Module({
   imports: [
@@ -41,8 +38,6 @@ const isRateLimitEnabled = process.env.NODE_ENV !== 'development';
     RedisModule,
     // BullMQ queues backed by Redis
     QueueModule,
-    // Rate limiting module (disabled in development mode for now)
-    ...(isRateLimitEnabled ? [RateLimitModule] : []),
     // Metrics module (global - Prometheus metrics)
     MetricsModule,
     // BlogModule,

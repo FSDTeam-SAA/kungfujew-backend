@@ -1,6 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { SkipThrottle } from '@nestjs/throttler';
 import { AppService } from './app.service';
 
 @ApiTags('health')
@@ -22,7 +21,6 @@ export class AppController {
       },
     },
   })
-  @SkipThrottle() // Skip rate limiting for health check
   @Get()
   getHello(): string {
     return this.appService.getHello();
