@@ -51,6 +51,18 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @ApiOperation({
+    summary: 'Get dashboard summary',
+    description:
+      'Returns aggregate order metrics and recent orders for the admin dashboard overview.',
+  })
+  @ApiOkResponse({ description: 'Dashboard summary returned successfully.' })
+  @Get('dashboard/summary')
+  async getDashboardSummary(@Req() req: AuthenticatedRequest) {
+    this.assertAdmin(req);
+    return this.adminService.getDashboardSummary();
+  }
+
+  @ApiOperation({
     summary: 'List orders',
     description:
       'Returns paginated order records for admin operations, with optional status and text search filters.',
@@ -100,6 +112,51 @@ export class AdminController {
   ) {
     this.assertAdmin(req);
     return this.adminService.listBalanceDue(queryDto);
+  }
+
+  @ApiOperation({
+    summary: 'List customer summaries',
+    description:
+      'Returns paginated customer aggregates based on order history.',
+  })
+  @ApiOkResponse({ description: 'Paginated customer list returned successfully.' })
+  @Get('customers')
+  async listCustomers(
+    @Query() queryDto: AdminOrderQueryDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    this.assertAdmin(req);
+    return this.adminService.listCustomers(queryDto);
+  }
+
+  @ApiOperation({
+    summary: 'Get customer details',
+    description: 'Returns customer profile details and all orders for an email.',
+  })
+  @ApiOkResponse({ description: 'Customer details returned successfully.' })
+  @ApiNotFoundResponse({ description: 'Customer was not found.' })
+  @Get('customers/:email')
+  async getCustomer(
+    @Param('email') email: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    this.assertAdmin(req);
+    return this.adminService.getCustomer(email);
+  }
+
+  @ApiOperation({
+    summary: 'List payment records',
+    description:
+      'Returns paginated orders with payment activity for the payments dashboard.',
+  })
+  @ApiOkResponse({ description: 'Paginated payment list returned successfully.' })
+  @Get('payments')
+  async listPayments(
+    @Query() queryDto: AdminOrderQueryDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    this.assertAdmin(req);
+    return this.adminService.listPayments(queryDto);
   }
 
   @ApiOperation({
@@ -220,6 +277,27 @@ export class AdminController {
   ) {
     this.assertAdmin(req);
     return this.adminService.approveOrder(orderId, req.user?.userId);
+  }
+
+  @ApiOperation({
+    summary: 'Reject order',
+    description: 'Cancels an order and records the rejection reason.',
+  })
+  @ApiParam({
+    name: 'orderId',
+    description: 'Customer-facing order reference.',
+    example: 'CCG-7788JD',
+  })
+  @ApiOkResponse({ description: 'Order rejected successfully.' })
+  @ApiNotFoundResponse({ description: 'Order was not found.' })
+  @Post('orders/:orderId/reject')
+  async rejectOrder(
+    @Param('orderId') orderId: string,
+    @Body('reason') reason: string | undefined,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    this.assertAdmin(req);
+    return this.adminService.rejectOrder(orderId, reason, req.user?.userId);
   }
 
   @ApiOperation({
