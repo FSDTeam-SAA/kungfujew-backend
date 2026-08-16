@@ -5,11 +5,9 @@ import {
   ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
-import { SkipThrottle } from '@nestjs/throttler';
 import { MetricsService } from './metrics.service';
 
 @ApiTags('metrics')
-@SkipThrottle() // Skip rate limiting for metrics endpoints
 @Controller()
 export class MetricsController {
   constructor(private readonly metricsService: MetricsService) {}
