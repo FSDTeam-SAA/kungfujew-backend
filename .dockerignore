@@ -1,4 +1,10 @@
 node_modules
+.env
+.env.*
+*.pem
+*.key
+coverage
+dist
 Dockerfile
 docker-compose.yaml
 .git

@@ -6,6 +6,7 @@ import { TailwindTmsService } from './tailwind-tms.service';
 import { TailwindTmsWebhookController } from './tailwind-tms-webhook.controller';
 import { OrderSchema } from '../customer/schemas/order.schema';
 import { DeliveryModule } from '../delivery/delivery.module';
+import { WebhookSecurityService } from '../../common/services/webhook-security.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { DeliveryModule } from '../delivery/delivery.module';
     DeliveryModule,
   ],
   controllers: [TailwindTmsWebhookController],
-  providers: [TailwindTmsService],
+  providers: [TailwindTmsService, WebhookSecurityService],
   exports: [TailwindTmsService],
 })
 export class TailwindTmsModule {}

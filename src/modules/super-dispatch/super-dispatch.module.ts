@@ -8,6 +8,7 @@ import { SuperDispatchWebhookController } from './super-dispatch-webhook.control
 import { SuperDispatchWebhookService } from './super-dispatch-webhook.service';
 import { OrderSchema } from '../customer/schemas/order.schema';
 import { DeliveryModule } from '../delivery/delivery.module';
+import { WebhookSecurityService } from '../../common/services/webhook-security.service';
 
 @Module({
   imports: [
@@ -24,10 +25,8 @@ import { DeliveryModule } from '../delivery/delivery.module';
     SuperDispatchAuthService,
     SuperDispatchOrderService,
     SuperDispatchWebhookService,
+    WebhookSecurityService,
   ],
-  exports: [
-    SuperDispatchAuthService,
-    SuperDispatchOrderService,
-  ],
+  exports: [SuperDispatchAuthService, SuperDispatchOrderService],
 })
 export class SuperDispatchModule {}
