@@ -30,6 +30,7 @@ async function bootstrap() {
   const winstonLogger = app.get<Logger>(WINSTON_MODULE_PROVIDER);
   app.useGlobalFilters(new AllExceptionsFilter(winstonLogger));
   app.useGlobalInterceptors(new TransformInterceptor(winstonLogger));
+  app.setGlobalPrefix('api/v1');
 
   // Check environment for Swagger setup
   const isProduction = process.env.NODE_ENV === 'production';
