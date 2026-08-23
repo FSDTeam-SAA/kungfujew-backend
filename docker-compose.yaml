@@ -4,6 +4,7 @@ services:
   mongodb:
     image: mongo:7.0
     container_name: mongodb
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-admin}
@@ -16,6 +17,26 @@ services:
     networks:
       - blog_network
     restart: unless-stopped
+
+  mongo-replica-init:
+    image: mongo:7.0
+    container_name: mongo_replica_init
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-admin}
+    depends_on:
+      mongodb:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        until mongosh "mongodb://$${MONGO_INITDB_ROOT_USERNAME}:$${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/admin?authSource=admin"
+        --quiet --eval "db.adminCommand({ ping: 1 }).ok"; do sleep 2; done;
+        mongosh "mongodb://$${MONGO_INITDB_ROOT_USERNAME}:$${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/admin?authSource=admin"
+        --quiet --eval "try { rs.status() } catch (error) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongodb:27017' }] }) }"
+    restart: "no"
+    networks:
+      - blog_network
 
   mongo-express:
     image: mongo-express:latest
