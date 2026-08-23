@@ -8,6 +8,8 @@ import { QuickBooksInvoiceService } from './quickbooks-invoice.service';
 import { QuickBooksController } from './quickbooks.controller';
 import { QuickBooksWebhookController } from './quickbooks-webhook.controller';
 import { QuickBooksConnectionModel } from './schemas/quickbooks-connection.schema';
+import { CommonModule } from '../../common/common.module';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @Module({
   imports: [
@@ -16,10 +18,20 @@ import { QuickBooksConnectionModel } from './schemas/quickbooks-connection.schem
       maxRedirects: 3,
     }),
     ConfigModule,
+    CommonModule,
     MongooseModule.forFeature([QuickBooksConnectionModel]),
   ],
   controllers: [QuickBooksController, QuickBooksWebhookController],
-  providers: [QuickBooksAuthService, QuickBooksPaymentService, QuickBooksInvoiceService],
-  exports: [QuickBooksAuthService, QuickBooksPaymentService, QuickBooksInvoiceService],
+  providers: [
+    QuickBooksAuthService,
+    QuickBooksPaymentService,
+    QuickBooksInvoiceService,
+    RolesGuard,
+  ],
+  exports: [
+    QuickBooksAuthService,
+    QuickBooksPaymentService,
+    QuickBooksInvoiceService,
+  ],
 })
 export class QuickBooksModule {}
