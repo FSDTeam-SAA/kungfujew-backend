@@ -10,6 +10,7 @@ import {
 import { Logger } from 'winston';
 import helmet from 'helmet';
 import { setupSwagger } from './common/config/swagger.config';
+import { createCorsOptions } from './common/config/cors.config';
 import 'dotenv/config';
 
 async function bootstrap() {
@@ -34,12 +35,7 @@ async function bootstrap() {
   const isProduction = process.env.NODE_ENV === 'production';
   const enableSwagger = process.env.ENABLE_SWAGGER !== 'false'; // Default to true
 
-  app.enableCors({
-    origin: '*',
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: '*',
-    credentials: false,
-  });
+  app.enableCors(createCorsOptions());
 
   // Security middleware - helmet helps secure Express apps by setting HTTP response headers
   // Adjust CSP for Swagger UI if enabled
