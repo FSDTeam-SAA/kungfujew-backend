@@ -19,6 +19,7 @@ import { TailwindTmsModule } from './modules/tailwind-tms/tailwind-tms.module';
 import { QuickBooksModule } from './modules/quickbooks/quickbooks.module';
 import { CarrierModule } from './modules/carrier/carrier.module';
 import { ScheduledTasksModule } from './modules/scheduled-tasks/scheduled-tasks.module';
+import { ContentModule } from './modules/content/content.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 
 @Module({
@@ -52,6 +53,7 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
     CarrierModule,
     ScheduledTasksModule,
     DeliveryModule,
+    ContentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -43,6 +43,9 @@ export class TransformInterceptor<T> implements NestInterceptor<T, any> {
         });
       }),
       map((data) => {
+        // Preserve the public content API contract for existing website clients.
+        if (Reflect.getMetadata('contentResponse', context.getClass()))
+          return data;
         const response = context
           .switchToHttp()
           .getResponse<{ statusCode: number }>();
