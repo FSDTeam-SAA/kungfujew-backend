@@ -62,6 +62,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (statusCode === HttpStatus.TOO_MANY_REQUESTS) {
       this.logger.warn('Request throttled', logPayload);
+    } else if (
+      statusCode >= HttpStatus.BAD_REQUEST &&
+      statusCode < HttpStatus.INTERNAL_SERVER_ERROR
+    ) {
+      this.logger.warn('Client request rejected', logPayload);
     } else {
       this.logger.error('Unhandled exception caught', logPayload);
     }
