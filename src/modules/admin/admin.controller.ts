@@ -323,8 +323,11 @@ export class AdminController {
   }
 
   private assertAdmin(req: AuthenticatedRequest): void {
-    if (req.user?.role !== 'admin') {
-      throw new ForbiddenException('Only admin users can access order ops.');
+    const role = req.user?.role;
+    if (role !== 'admin' && role !== 'operations_manager') {
+      throw new ForbiddenException(
+        'Only admin or operations manager can access this resource.',
+      );
     }
   }
 }

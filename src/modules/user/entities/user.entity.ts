@@ -58,7 +58,13 @@ export class User {
   @ApiProperty({
     example: 'customer',
     description: 'User role',
-    enum: ['customer', 'businessowner', 'admin'],
+    enum: [
+      'customer',
+      'businessowner',
+      'admin',
+      'story_manager',
+      'operations_manager',
+    ],
   })
   role: string;
 

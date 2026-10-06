@@ -11,6 +11,8 @@ import {
   UserProfileSchema,
   ActivityLogEvent,
   ActivityLogEventSchema,
+  AuthSecurity,
+  AuthSecuritySchema,
 } from '../../database/schemas';
 
 @Module({
@@ -21,6 +23,7 @@ import {
       { name: AuthUser.name, schema: AuthUserSchema },
       { name: UserProfile.name, schema: UserProfileSchema },
       { name: ActivityLogEvent.name, schema: ActivityLogEventSchema },
+      { name: AuthSecurity.name, schema: AuthSecuritySchema },
     ]),
   ],
   controllers: [UserController],

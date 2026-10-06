@@ -27,7 +27,16 @@ export class AuthUser extends Document {
   @Prop({ required: true })
   password!: string;
 
-  @Prop({ enum: ['customer', 'businessowner', 'admin'], default: 'customer' })
+  @Prop({
+    enum: [
+      'customer',
+      'businessowner',
+      'admin',
+      'story_manager',
+      'operations_manager',
+    ],
+    default: 'customer',
+  })
   role!: string;
 
   @Prop()

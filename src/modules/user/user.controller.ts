@@ -3,9 +3,12 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Post,
+  Delete,
   Param,
   Body,
   Patch,
+  Query,
   Request,
   UploadedFile,
   UseGuards,
@@ -16,17 +19,21 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { UserService } from './user.service';
+import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AdminSetPasswordDto } from './dto/admin-set-password.dto';
 import {
   ApiResponseDecorator,
   ApiArrayResponseDecorator,
@@ -56,6 +63,22 @@ export class UserController {
   @Get()
   findAll() {
     return this.userService.findAll();
+  }
+
+  @ApiOperation({
+    summary: 'Create user (Admin only)',
+    description:
+      'Creates a new user profile with a specific role, password, and pre-verified status.',
+  })
+  @ApiCreatedResponse({
+    description: 'User created successfully.',
+    type: User,
+  })
+  @ApiForbiddenResponse({ description: 'Only admin users can create users.' })
+  @Roles(UserRole.ADMIN)
+  @Post()
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.userService.adminCreateUser(createUserDto);
   }
 
   @ApiOperation({
@@ -156,7 +179,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Update user by ID',
     description:
-      'Admins can update any profile. Non-admin users can only update their own profile.',
+      'Admins can update any profile (including role, status, email). Non-admin users can only update their own profile.',
   })
   @ApiParam({
     name: 'id',
@@ -170,6 +193,18 @@ export class UserController {
       type: 'object',
       properties: {
         fullName: { type: 'string' },
+        email: { type: 'string' },
+        role: {
+          type: 'string',
+          enum: [
+            'customer',
+            'businessowner',
+            'admin',
+            'story_manager',
+            'operations_manager',
+          ],
+        },
+        status: { type: 'string' },
         phoneNumber: { type: 'string' },
         country: { type: 'string' },
         city: { type: 'string' },
@@ -217,5 +252,66 @@ export class UserController {
     }
 
     return this.userService.update(id, updateUserDto, avatar, req.user.role);
+  }
+
+  @ApiOperation({
+    summary: 'Set user password (Admin only)',
+    description:
+      'Sets or resets a password for any user directly and revokes all active tokens.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'MongoDB user ID.',
+    example: '65f1c2a6e5b9a2d8a4f2c111',
+  })
+  @ApiResponseDecorator(200, 'Password updated successfully')
+  @ApiForbiddenResponse({
+    description: 'Only admin users can set user passwords.',
+  })
+  @Roles(UserRole.ADMIN)
+  @Patch(':id/password')
+  setPassword(
+    @Param('id') id: string,
+    @Body() adminSetPasswordDto: AdminSetPasswordDto,
+  ) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid user id format');
+    }
+
+    return this.userService.adminSetPassword(
+      id,
+      adminSetPasswordDto.password,
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Delete user (Admin only)',
+    description:
+      'Deactivates (soft delete) or permanently deletes a user profile.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'MongoDB user ID.',
+    example: '65f1c2a6e5b9a2d8a4f2c111',
+  })
+  @ApiQuery({
+    name: 'permanent',
+    required: false,
+    type: Boolean,
+    description: 'Pass true to permanently delete the document from the database.',
+  })
+  @ApiResponseDecorator(200, 'User deleted successfully')
+  @ApiForbiddenResponse({ description: 'Only admin users can delete users.' })
+  @Roles(UserRole.ADMIN)
+  @Delete(':id')
+  deleteUser(
+    @Param('id') id: string,
+    @Query('permanent') permanent?: string,
+  ) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid user id format');
+    }
+
+    return this.userService.adminDeleteUser(id, permanent === 'true');
   }
 }

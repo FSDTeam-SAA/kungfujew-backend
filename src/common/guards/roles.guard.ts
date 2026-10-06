@@ -30,6 +30,11 @@ export class RolesGuard implements CanActivate {
       );
     }
 
+    // Admin has superuser privileges across all role-protected endpoints
+    if (user.role === UserRole.ADMIN || user.role === 'admin') {
+      return true;
+    }
+
     const hasRole = requiredRoles.includes(user.role);
 
     if (!hasRole) {

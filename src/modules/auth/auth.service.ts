@@ -69,13 +69,19 @@ export class AuthService {
       'AuthService',
     );
 
-    // Security Check: Prevent public registration as an admin
-    if (payload.role === 'admin') {
+    // Security Check: Prevent public registration as an admin or manager
+    if (
+      payload.role === 'admin' ||
+      payload.role === 'story_manager' ||
+      payload.role === 'operations_manager'
+    ) {
       this.customLogger.warn(
-        `Public admin registration blocked for: ${email}`,
+        `Public privileged role registration blocked for: ${email} (requested role: ${payload.role})`,
         'AuthService',
       );
-      throw AppError.forbidden('Cannot register as an administrator publicly.');
+      throw AppError.forbidden(
+        'Cannot register with administrative or managerial roles publicly.',
+      );
     }
 
     const { LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MS } = AUTH_CONFIG.RATE_LIMIT;

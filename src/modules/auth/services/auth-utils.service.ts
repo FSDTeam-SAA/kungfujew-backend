@@ -292,6 +292,9 @@ export class AuthUtilsService {
     const { ROLE_HIERARCHY } = AUTH_CONFIG;
     const roleLevels: Record<UserRole, number> = {
       [UserRole.CUSTOMER]: ROLE_HIERARCHY.customer,
+      [UserRole.BUSINESS_OWNER]: ROLE_HIERARCHY.businessowner,
+      [UserRole.STORY_MANAGER]: ROLE_HIERARCHY.story_manager,
+      [UserRole.OPERATIONS_MANAGER]: ROLE_HIERARCHY.operations_manager,
       [UserRole.ADMIN]: ROLE_HIERARCHY.admin,
     };
 

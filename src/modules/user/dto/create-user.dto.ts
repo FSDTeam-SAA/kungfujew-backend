@@ -10,11 +10,8 @@ import {
   MaxLength,
 } from 'class-validator';
 
-export enum UserRole {
-  CUSTOMER = 'customer',
-  BUSINESS_OWNER = 'businessowner',
-  ADMIN = 'admin',
-}
+import { UserRole } from '../../auth/interfaces/auth.interface';
+export { UserRole };
 
 export class CreateUserDto {
   @ApiProperty({ example: 'John Doe', description: 'User full name' })

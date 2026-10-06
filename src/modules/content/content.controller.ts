@@ -35,28 +35,37 @@ export class StoriesController {
   @Get()
   @UseGuards(OptionalAuthGuard)
   list(@Query() query: Record<string, unknown>, @Req() req: ContentRequest) {
-    return this.content.listStories(query, req.user?.role === UserRole.ADMIN);
+    const isManager =
+      req.user?.role === UserRole.ADMIN ||
+      req.user?.role === UserRole.STORY_MANAGER;
+    return this.content.listStories(query, isManager);
   }
   @Get('slug/:slug')
   @UseGuards(OptionalAuthGuard)
   slug(@Param('slug') slug: string, @Req() req: ContentRequest) {
-    return this.content.getStory(slug, req.user?.role === UserRole.ADMIN, true);
+    const isManager =
+      req.user?.role === UserRole.ADMIN ||
+      req.user?.role === UserRole.STORY_MANAGER;
+    return this.content.getStory(slug, isManager, true);
   }
   @Get(':idOrSlug')
   @UseGuards(OptionalAuthGuard)
   detail(@Param('idOrSlug') id: string, @Req() req: ContentRequest) {
-    return this.content.getStory(id, req.user?.role === UserRole.ADMIN);
+    const isManager =
+      req.user?.role === UserRole.ADMIN ||
+      req.user?.role === UserRole.STORY_MANAGER;
+    return this.content.getStory(id, isManager);
   }
   @Post('upload-image')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.STORY_MANAGER)
   @UseInterceptors(imageUpload)
   upload(@UploadedFile() file?: Express.Multer.File) {
     return this.content.upload(file);
   }
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.STORY_MANAGER)
   @UseInterceptors(imageUpload)
   create(
     @Body() body: Record<string, unknown>,
@@ -66,7 +75,7 @@ export class StoriesController {
   }
   @Put(':id')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.STORY_MANAGER)
   @UseInterceptors(imageUpload)
   update(
     @Param('id') id: string,
@@ -77,13 +86,13 @@ export class StoriesController {
   }
   @Patch(':id/publish')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.STORY_MANAGER)
   publish(@Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.content.publish(id, body.isPublished);
   }
   @Delete(':id')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.STORY_MANAGER)
   remove(@Param('id') id: string) {
     return this.content.remove('story', id);
   }
