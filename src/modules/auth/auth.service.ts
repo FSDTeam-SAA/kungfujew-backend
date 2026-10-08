@@ -937,6 +937,11 @@ export class AuthService {
     return { message: 'Logged out from all devices successfully' };
   }
 
+  async invalidateUserSessions(userId: string): Promise<void> {
+    await this.revokeAllUserTokens(userId);
+    await this.incrementTokenVersion(userId);
+  }
+
   /**
    * Add a session (JTI) to user's session list
    */

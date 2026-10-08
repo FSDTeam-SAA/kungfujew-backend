@@ -13,6 +13,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { CustomLoggerService } from '../../common/services/custom-logger.service';
 import { AuthUser, AuthSecurity } from '../../database/schemas';
 import { CloudinaryService } from '../../common/services/cloudinary.service';
+import { AuthService } from '../auth/auth.service';
+import { AuthUtilsService } from '../auth/services/auth-utils.service';
 
 @Injectable()
 export class UserService {
@@ -22,6 +24,8 @@ export class UserService {
     private readonly authSecurityModel: Model<AuthSecurity>,
     private readonly customLogger: CustomLoggerService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly authService: AuthService,
+    private readonly authUtilsService: AuthUtilsService,
   ) {}
 
   async findAll() {
@@ -76,7 +80,14 @@ export class UserService {
     }
 
     if (!createUserDto.password) {
-      throw new BadRequestException('Password is required when creating a user');
+      throw new BadRequestException(
+        'Password is required when creating a user',
+      );
+    }
+    if (!this.authUtilsService.validatePassword(createUserDto.password)) {
+      throw new BadRequestException(
+        'Password does not meet security requirements',
+      );
     }
 
     // Hash password with argon2
@@ -126,16 +137,22 @@ export class UserService {
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
+    if (!this.authUtilsService.validatePassword(newPassword)) {
+      throw new BadRequestException(
+        'Password does not meet security requirements',
+      );
+    }
 
     const hashedPassword = await argon2.hash(newPassword);
     user.password = hashedPassword;
-    user.tokenVersion = (user.tokenVersion || 0) + 1; // Invalidate all active tokens
     user.updatedAt = new Date();
     await user.save();
+    await this.authService.invalidateUserSessions(userId);
 
     return {
       statusCode: 200,
-      message: 'Password updated successfully. All active sessions have been invalidated.',
+      message:
+        'Password updated successfully. All active sessions have been invalidated.',
     };
   }
 
@@ -154,6 +171,7 @@ export class UserService {
     }
 
     if (permanent) {
+      await this.authService.invalidateUserSessions(userId);
       await this.userModel.findByIdAndDelete(userId);
       await this.authSecurityModel.deleteMany({ authId: userId });
       return {
@@ -164,9 +182,9 @@ export class UserService {
 
     user.status = 'DELETED';
     user.deletedAt = new Date();
-    user.tokenVersion = (user.tokenVersion || 0) + 1; // Invalidate active tokens
     user.updatedAt = new Date();
     await user.save();
+    await this.authService.invalidateUserSessions(userId);
 
     return {
       statusCode: 200,
@@ -232,6 +250,13 @@ export class UserService {
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    if (
+      actorRole === 'admin' &&
+      (updateUserDto.role !== undefined || updateUserDto.status !== undefined)
+    ) {
+      await this.authService.invalidateUserSessions(id);
     }
 
     return user;

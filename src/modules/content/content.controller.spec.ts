@@ -46,9 +46,19 @@ describe('content HTTP integration', () => {
         },
       })
       .overrideGuard(OptionalAuthGuard)
-      .useValue({ canActivate: () => true })
+      .useValue({
+        canActivate(context: ExecutionContext) {
+          const req = context
+            .switchToHttp()
+            .getRequest<Request & { user?: { role: string } }>();
+          const role = req.headers['x-test-role'];
+          if (role) req.user = { role: String(role) };
+          return true;
+        },
+      })
       .compile();
     app = module.createNestApplication();
+    app.setGlobalPrefix('api/v1');
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -101,5 +111,23 @@ describe('content HTTP integration', () => {
       expect.objectContaining({ title: 'New story', faqs: '[]' }),
       undefined,
     );
+  });
+  it('allows story managers to view drafts and write stories, but denies operations managers', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/real-shipment-stories')
+      .set('x-test-role', 'story_manager')
+      .expect(200);
+    expect(content.listStories).toHaveBeenLastCalledWith({}, true);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/real-shipment-stories')
+      .set('x-test-role', 'story_manager')
+      .field('title', 'Managed story')
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/v1/real-shipment-stories')
+      .set('x-test-role', 'operations_manager')
+      .field('title', 'Denied story')
+      .expect(403);
   });
 });

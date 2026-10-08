@@ -29,7 +29,7 @@ const imageUpload = FileInterceptor('image', {
 });
 
 @SetMetadata('contentResponse', true)
-@Controller('api/v1/real-shipment-stories')
+@Controller('real-shipment-stories')
 export class StoriesController {
   constructor(private readonly content: ContentService) {}
   @Get()
@@ -99,7 +99,7 @@ export class StoriesController {
 }
 
 @SetMetadata('contentResponse', true)
-@Controller('api/v1/projects')
+@Controller('projects')
 export class ProjectsController {
   constructor(private readonly content: ContentService) {}
   @Get()
