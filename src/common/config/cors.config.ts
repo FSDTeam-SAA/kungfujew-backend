@@ -3,6 +3,9 @@ import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-option
 const DEVELOPMENT_ORIGINS = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'https://dashboard.carcarriergroup.com',
 ];
 
 type Environment = Record<string, string | undefined>;
