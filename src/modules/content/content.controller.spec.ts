@@ -83,6 +83,10 @@ describe('content HTTP integration', () => {
       data: [],
       pagination: { total: 0 },
     });
+    expect(result.headers['cache-control']).toBe(
+      'public, max-age=0, s-maxage=30',
+    );
+    expect(result.headers.vary).toContain('Authorization');
   });
   it('requires authentication and admin role for writes', async () => {
     await request(app.getHttpServer())
@@ -113,10 +117,11 @@ describe('content HTTP integration', () => {
     );
   });
   it('allows story managers to view drafts and write stories, but denies operations managers', async () => {
-    await request(app.getHttpServer())
+    const managerList = await request(app.getHttpServer())
       .get('/api/v1/real-shipment-stories')
       .set('x-test-role', 'story_manager')
       .expect(200);
+    expect(managerList.headers['cache-control']).toBe('private, no-store');
     expect(content.listStories).toHaveBeenLastCalledWith({}, true);
 
     await request(app.getHttpServer())

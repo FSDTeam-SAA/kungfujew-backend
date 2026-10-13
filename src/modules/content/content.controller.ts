@@ -9,13 +9,14 @@ import {
   Put,
   Query,
   Req,
+  Res,
   SetMetadata,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -25,7 +26,13 @@ import { ContentService } from './content.service';
 
 type ContentRequest = Request & { user?: { role: UserRole } };
 const imageUpload = FileInterceptor('image', {
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1,
+    fields: 20,
+    parts: 21,
+    fieldSize: 2 * 1024 * 1024,
+  },
 });
 
 @SetMetadata('contentResponse', true)
@@ -34,27 +41,55 @@ export class StoriesController {
   constructor(private readonly content: ContentService) {}
   @Get()
   @UseGuards(OptionalAuthGuard)
-  list(@Query() query: Record<string, unknown>, @Req() req: ContentRequest) {
+  async list(
+    @Query() query: Record<string, unknown>,
+    @Req() req: ContentRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const isManager =
       req.user?.role === UserRole.ADMIN ||
       req.user?.role === UserRole.STORY_MANAGER;
-    return this.content.listStories(query, isManager);
+    const result = await this.content.listStories(query, isManager);
+    this.cacheHeaders(req, res);
+    return result;
   }
   @Get('slug/:slug')
   @UseGuards(OptionalAuthGuard)
-  slug(@Param('slug') slug: string, @Req() req: ContentRequest) {
+  async slug(
+    @Param('slug') slug: string,
+    @Req() req: ContentRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const isManager =
       req.user?.role === UserRole.ADMIN ||
       req.user?.role === UserRole.STORY_MANAGER;
-    return this.content.getStory(slug, isManager, true);
+    const result = await this.content.getStory(slug, isManager, true);
+    this.cacheHeaders(req, res);
+    return result;
   }
   @Get(':idOrSlug')
   @UseGuards(OptionalAuthGuard)
-  detail(@Param('idOrSlug') id: string, @Req() req: ContentRequest) {
+  async detail(
+    @Param('idOrSlug') id: string,
+    @Req() req: ContentRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const isManager =
       req.user?.role === UserRole.ADMIN ||
       req.user?.role === UserRole.STORY_MANAGER;
-    return this.content.getStory(id, isManager);
+    const result = await this.content.getStory(id, isManager);
+    this.cacheHeaders(req, res);
+    return result;
+  }
+
+  private cacheHeaders(req: ContentRequest, res: Response) {
+    res.vary('Authorization');
+    res.setHeader(
+      'Cache-Control',
+      req.user || req.headers.authorization
+        ? 'private, no-store'
+        : 'public, max-age=0, s-maxage=30',
+    );
   }
   @Post('upload-image')
   @UseGuards(AuthGuard, RolesGuard)

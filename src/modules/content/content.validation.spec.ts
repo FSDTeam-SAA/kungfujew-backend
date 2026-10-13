@@ -3,6 +3,8 @@ import {
   contentInput,
   escapeRegex,
   pagination,
+  queryText,
+  validateStoryImage,
 } from './content.validation';
 
 describe('migrated content validation', () => {
@@ -72,5 +74,51 @@ describe('migrated content validation', () => {
       limit: 10,
     });
     expect(new RegExp(escapeRegex('car (SUV)+')).test('car (SUV)+')).toBe(true);
+  });
+
+  it('rejects unreachable slugs, empty editor markup and excessive content', () => {
+    for (const slug of ['a/b', 'a?b', 'a b', '-story', 'story-'])
+      expect(() => contentInput({ ...story, slug }, 'story', true)).toThrow();
+    for (const content of ['<p><br></p>', '<p>&nbsp; &#160;</p>'])
+      expect(() =>
+        contentInput({ ...story, content }, 'story', true),
+      ).toThrow();
+    expect(() =>
+      contentInput({ ...story, title: 'x'.repeat(201) }, 'story', true),
+    ).toThrow();
+    expect(() =>
+      contentInput(
+        {
+          faqs: Array.from({ length: 21 }, () => ({
+            question: 'Q',
+            answer: 'A',
+          })),
+        },
+        'story',
+        false,
+      ),
+    ).toThrow();
+  });
+
+  it('rejects disguised and oversized images before calling the provider', () => {
+    const file = (buffer: Buffer, mimetype = 'image/png') =>
+      ({ buffer, mimetype }) as Express.Multer.File;
+    expect(() =>
+      validateStoryImage(file(Buffer.from('<script>bad</script>'))),
+    ).toThrow();
+    expect(() =>
+      validateStoryImage(file(Buffer.alloc(10 * 1024 * 1024 + 1))),
+    ).toThrow();
+    const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+    expect(() => validateStoryImage(file(png))).not.toThrow();
+    expect(() => validateStoryImage(file(png, 'image/jpeg'))).toThrow();
+    expect(() => queryText('x'.repeat(201))).toThrow();
+    const avif = Buffer.concat([
+      Buffer.from([0, 0, 0, 24]),
+      Buffer.from('ftypmif1'),
+      Buffer.alloc(4),
+      Buffer.from('avifmif1'),
+    ]);
+    expect(() => validateStoryImage(file(avif, 'image/avif'))).not.toThrow();
   });
 });

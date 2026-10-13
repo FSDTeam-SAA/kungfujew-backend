@@ -37,6 +37,10 @@ export const StorySchema = new Schema(
   { timestamps: true, collection: 'realshipmentstories' },
 );
 
+StorySchema.index({ isPublished: 1, serviceLine: 1, createdAt: -1, _id: -1 });
+StorySchema.index({ isPublished: 1, createdAt: -1, _id: -1 });
+StorySchema.index({ createdAt: -1, _id: -1 });
+
 export const ProjectSchema = new Schema(
   {
     name: requiredText,

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import {
   escapeRegex,
   pagination,
   queryText,
+  validateStoryImage,
 } from './content.validation';
 
 @Injectable()
@@ -53,7 +55,14 @@ export class ContentService {
       ].map((field) => ({
         [field]: { $regex: escapeRegex(search), $options: 'i' },
       }));
-    return this.list(this.stories, filter, query);
+    const summary =
+      query.summary === undefined ? false : booleanValue(query.summary);
+    return this.list(
+      this.stories,
+      filter,
+      query,
+      summary ? '-content -faqs' : undefined,
+    );
   }
 
   async listProjects(query: Record<string, unknown>) {
@@ -76,16 +85,20 @@ export class ContentService {
     model: Model<T>,
     filter: FilterQuery<T>,
     query: Record<string, unknown>,
+    projection?: string,
   ) {
     const { page, limit } = pagination(query);
     const [data, total] = await Promise.all([
       model
         .find(filter)
+        .select(projection ?? '')
         .sort({ createdAt: -1, _id: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
+        .lean()
+        .maxTimeMS(5000)
         .exec(),
-      model.countDocuments(filter).exec(),
+      model.countDocuments(filter).maxTimeMS(5000).exec(),
     ]);
     const totalPages = Math.ceil(total / limit);
     return {
@@ -132,24 +145,49 @@ export class ContentService {
     id?: string,
   ) {
     const input = contentInput(body, 'story', !id);
+    const baseUpdatedAt = queryText(body.baseUpdatedAt);
+    if (baseUpdatedAt && (!id || !Number.isFinite(Date.parse(baseUpdatedAt))))
+      throw new BadRequestException('Invalid story version');
     if (id) {
       this.checkId(id);
       const existing = await this.getStory(id, true);
       if (
-        input.isPublished &&
+        baseUpdatedAt &&
+        existing.data.updatedAt?.toISOString() !== baseUpdatedAt
+      )
+        throw new ConflictException(
+          'This story changed. Keep your local draft and reload the latest version before saving.',
+        );
+      if (
+        (input.isPublished ?? existing.data.isPublished) &&
         !SERVICE_LINES.includes(
           queryText(input.serviceLine ?? existing.data.serviceLine),
         )
       )
         throw new BadRequestException('Assign a serviceLine before publishing');
+      if (input.isPublished ?? existing.data.isPublished)
+        contentInput({ ...existing.data.toObject(), ...input }, 'story', true);
     }
     if (file) input.image = (await this.upload(file)).url;
     return this.write(async () => {
       const data = id
-        ? await this.stories
-            .findByIdAndUpdate(id, input, { new: true, runValidators: true })
-            .exec()
+        ? await (
+            baseUpdatedAt
+              ? this.stories.findOneAndUpdate(
+                  { _id: id, updatedAt: new Date(baseUpdatedAt) },
+                  input,
+                  { new: true, runValidators: true },
+                )
+              : this.stories.findByIdAndUpdate(id, input, {
+                  new: true,
+                  runValidators: true,
+                })
+          ).exec()
         : await this.stories.create(input);
+      if (!data && baseUpdatedAt)
+        throw new ConflictException(
+          'This story changed. Keep your local draft and reload the latest version before saving.',
+        );
       if (!data) throw new NotFoundException('Shipment story not found');
       return { success: true, data };
     });
@@ -176,7 +214,11 @@ export class ContentService {
       value === undefined ? !story.isPublished : booleanValue(value);
     if (isPublished && !SERVICE_LINES.includes(story.serviceLine))
       throw new BadRequestException('Assign a serviceLine before publishing');
-    return this.saveStory({ isPublished }, undefined, id);
+    return this.saveStory(
+      { isPublished, baseUpdatedAt: story.updatedAt?.toISOString() },
+      undefined,
+      id,
+    );
   }
 
   async remove(kind: 'story' | 'project', id: string) {
@@ -190,10 +232,7 @@ export class ContentService {
   }
 
   async upload(file?: Express.Multer.File) {
-    if (!file || !/^image\/(jpeg|png|webp|gif|avif)$/.test(file.mimetype))
-      throw new BadRequestException(
-        'Provide a JPEG, PNG, WebP, GIF or AVIF image',
-      );
+    validateStoryImage(file);
     const { url } = await this.cloudinary.uploadImage(
       file.buffer,
       'real-shipment-stories',
