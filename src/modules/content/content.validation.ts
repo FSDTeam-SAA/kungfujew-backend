@@ -105,6 +105,34 @@ export function contentInput(
   }
   if (kind === 'story' && body.isPublished !== undefined)
     result.isPublished = booleanValue(body.isPublished);
+  if (kind === 'story' && body.coverPosition !== undefined) {
+    let position: unknown = body.coverPosition;
+    if (typeof position === 'string') {
+      try {
+        position = JSON.parse(position);
+      } catch {
+        throw new BadRequestException('Invalid cover position JSON');
+      }
+    }
+    if (
+      !position ||
+      typeof position !== 'object' ||
+      Array.isArray(position) ||
+      !('x' in position) ||
+      !('y' in position) ||
+      ![position.x, position.y].every(
+        (value) =>
+          typeof value === 'number' &&
+          Number.isFinite(value) &&
+          value >= 0 &&
+          value <= 100,
+      )
+    )
+      throw new BadRequestException(
+        'Cover position requires x and y percentages from 0 to 100',
+      );
+    result.coverPosition = { x: position.x, y: position.y };
+  }
   if (kind === 'story' && body.faqs !== undefined) {
     let faqs: unknown = body.faqs;
     if (typeof faqs === 'string') {

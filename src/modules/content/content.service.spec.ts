@@ -133,4 +133,61 @@ describe('content visibility and publishing', () => {
     ).rejects.toThrow('Story content must include text');
     expect(stories.findByIdAndUpdate).not.toHaveBeenCalled();
   });
+  it('preserves omitted cover positioning and resets it when legacy clients replace or remove an image', async () => {
+    stories.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        isPublished: false,
+        image: 'https://images.example/old.jpg',
+      }),
+    });
+    stories.findByIdAndUpdate.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({}),
+    });
+    const id = '507f1f77bcf86cd799439011';
+    await service.saveStory({ title: 'Updated' }, undefined, id);
+    expect(stories.findByIdAndUpdate).toHaveBeenLastCalledWith(
+      id,
+      { title: 'Updated' },
+      expect.any(Object),
+    );
+    await service.saveStory(
+      { image: 'https://images.example/new.jpg' },
+      undefined,
+      id,
+    );
+    expect(stories.findByIdAndUpdate).toHaveBeenLastCalledWith(
+      id,
+      {
+        image: 'https://images.example/new.jpg',
+        coverPosition: { x: 50, y: 50 },
+      },
+      expect.any(Object),
+    );
+    await service.saveStory(
+      {
+        image: 'https://images.example/new.jpg',
+        coverPosition: { x: 20, y: 80 },
+      },
+      undefined,
+      id,
+    );
+    expect(stories.findByIdAndUpdate).toHaveBeenLastCalledWith(
+      id,
+      {
+        image: 'https://images.example/new.jpg',
+        coverPosition: { x: 20, y: 80 },
+      },
+      expect.any(Object),
+    );
+    await service.saveStory(
+      { image: '', coverPosition: { x: 20, y: 80 } },
+      undefined,
+      id,
+    );
+    expect(stories.findByIdAndUpdate).toHaveBeenLastCalledWith(
+      id,
+      { image: '', coverPosition: { x: 50, y: 50 } },
+      expect.any(Object),
+    );
+  });
 });

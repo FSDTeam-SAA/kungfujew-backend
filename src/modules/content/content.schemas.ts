@@ -26,6 +26,16 @@ export const StorySchema = new Schema(
     },
     image: String,
     imageAlt: String,
+    coverPosition: {
+      type: new Schema(
+        {
+          x: { type: Number, required: true, min: 0, max: 100 },
+          y: { type: Number, required: true, min: 0, max: 100 },
+        },
+        { _id: false },
+      ),
+      default: () => ({ x: 50, y: 50 }),
+    },
     faqs: [
       new Schema(
         { question: requiredText, answer: requiredText },

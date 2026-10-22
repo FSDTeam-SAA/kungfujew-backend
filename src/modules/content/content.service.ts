@@ -57,12 +57,19 @@ export class ContentService {
       }));
     const summary =
       query.summary === undefined ? false : booleanValue(query.summary);
-    return this.list(
+    const result = await this.list(
       this.stories,
       filter,
       query,
       summary ? '-content -faqs' : undefined,
     );
+    return {
+      ...result,
+      data: result.data.map((story) => ({
+        ...story,
+        coverPosition: story.coverPosition ?? { x: 50, y: 50 },
+      })),
+    };
   }
 
   async listProjects(query: Record<string, unknown>) {
@@ -145,12 +152,14 @@ export class ContentService {
     id?: string,
   ) {
     const input = contentInput(body, 'story', !id);
+    let previousImage: string | undefined;
     const baseUpdatedAt = queryText(body.baseUpdatedAt);
     if (baseUpdatedAt && (!id || !Number.isFinite(Date.parse(baseUpdatedAt))))
       throw new BadRequestException('Invalid story version');
     if (id) {
       this.checkId(id);
       const existing = await this.getStory(id, true);
+      previousImage = existing.data.image;
       if (
         baseUpdatedAt &&
         existing.data.updatedAt?.toISOString() !== baseUpdatedAt
@@ -169,6 +178,12 @@ export class ContentService {
         contentInput({ ...existing.data.toObject(), ...input }, 'story', true);
     }
     if (file) input.image = (await this.upload(file)).url;
+    if (
+      input.image !== undefined &&
+      input.image !== previousImage &&
+      (input.coverPosition === undefined || !input.image)
+    )
+      input.coverPosition = { x: 50, y: 50 };
     return this.write(async () => {
       const data = id
         ? await (

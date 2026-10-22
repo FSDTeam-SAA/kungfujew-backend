@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -23,6 +24,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../auth/interfaces/auth.interface';
 import { ContentService } from './content.service';
+import { StoryAnalyticsService } from './story-analytics.service';
 
 type ContentRequest = Request & { user?: { role: UserRole } };
 const imageUpload = FileInterceptor('image', {
@@ -38,7 +40,10 @@ const imageUpload = FileInterceptor('image', {
 @SetMetadata('contentResponse', true)
 @Controller('real-shipment-stories')
 export class StoriesController {
-  constructor(private readonly content: ContentService) {}
+  constructor(
+    private readonly content: ContentService,
+    private readonly analytics: StoryAnalyticsService,
+  ) {}
   @Get()
   @UseGuards(OptionalAuthGuard)
   async list(
@@ -53,6 +58,42 @@ export class StoriesController {
     this.cacheHeaders(req, res);
     return result;
   }
+  @Get('analytics')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STORY_MANAGER)
+  readership(
+    @Query() query: Record<string, unknown>,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.vary('Authorization');
+    return this.analytics.report(query);
+  }
+
+  @Get(':id/analytics')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STORY_MANAGER)
+  storyReadership(
+    @Param('id') id: string,
+    @Query() query: Record<string, unknown>,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.vary('Authorization');
+    return this.analytics.report(query, id);
+  }
+
+  @Post(':id/events')
+  @HttpCode(200)
+  recordEvent(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.analytics.record(id, body);
+  }
+
   @Get('slug/:slug')
   @UseGuards(OptionalAuthGuard)
   async slug(
