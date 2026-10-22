@@ -44,3 +44,52 @@ confirm its public detail returns 404. Check project search, pagination, CRUD,
 profile name changes, password changes and old website dashboard redirects.
 Password changes require signing in again. Email remains read-only because the
 main backend protects that field.
+
+## Story cover positioning and readership
+
+Story writes accept optional `coverPosition: { x, y }` percentages between 0 and
+100 (a JSON string in multipart forms). Existing stories default to 50/50.
+Omitting the field preserves an existing position; replacing/removing an image
+without an explicit new position resets it to center. Original images are kept.
+
+The website forwards best-effort visit events to public
+`POST /api/v1/real-shipment-stories/:id/events`:
+`{ viewId: "UUID-v4", event: "open" | "engaged" | "complete", activeSeconds: number, progress: number }`.
+An engaged event requires 30 active seconds; a completion also requires 90%
+article progress. Accepted responses are `{ success: true, data: { accepted: true } }`.
+Out-of-order events use a monotonic stage and count one open per page-visit ID.
+These metrics describe observed browser activity, not verified people or unique
+readers; blocked telemetry and network failures reduce observed counts. No
+historical readership can be recovered.
+
+Reporting requires an admin or story-manager token:
+
+- `GET /api/v1/real-shipment-stories/analytics?storyIds=<comma-separated-ids>&days=30`
+- `GET /api/v1/real-shipment-stories/:id/analytics?days=30`
+
+Both return `{ success: true, data: { days, from, to, trackingStartedAt, stories } }`.
+Each story has `storyId`, `opens`, `engaged`, `completed`, and zero-filled `daily`
+rows with `date` (YYYY-MM-DD) and the same counts. Reports use UTC first-open
+dates, support 7/30/90 calendar days including today, and accept up to 50 story
+IDs per batch. Counts cover the selected range. `trackingStartedAt` is null
+before tracking begins; afterward its persisted earliest timestamp survives
+visit retention. Responses are private and never cached.
+
+Deploy the additive backend before either UI. In staging, confirm `storyvisits`
+has the unique `{ storyId: 1, viewId: 1 }` index, reporting index
+`{ storyId: 1, openedAt: 1 }`, and TTL `{ expiresAt: 1 }` with
+`expireAfterSeconds: 0` before enabling collection. Mongo TTL cleanup is
+asynchronous. Visits expire 90 days after the first accepted event, while the
+non-identifying `storytracking` singleton preserves the start timestamp.
+No existing story migration is needed. If automatic index creation is disabled
+by deployment policy, provision these indexes before traffic.
+
+Redis must be ready for collection. An atomic fixed window allows 12 events
+per visit and 6000 events globally each minute, including server-side proxies;
+the backend does not read or store forwarded client IPs. Redis failure returns
+503 before a database lookup; exhausted limits return 429. Limits bound direct
+endpoint abuse but do not authenticate readers or prevent forged activity.
+No names, emails, raw IPs, or full user-agent strings are stored in visit records.
+Verify duplicate events, reversed event order, draft rejection, manager access,
+and expiry/index behavior in staging. No production data or indexes are changed
+by local tests.

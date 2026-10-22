@@ -41,6 +41,24 @@ describe('migrated content validation', () => {
       contentInput({ image: '', imageAlt: '', faqs: '[]' }, 'story', false),
     ).toEqual({ image: '', imageAlt: '', faqs: [] });
   });
+  it('validates cover percentages from JSON and multipart without coercion', () => {
+    expect(
+      contentInput({ coverPosition: '{"x":0,"y":100}' }, 'story', false),
+    ).toEqual({ coverPosition: { x: 0, y: 100 } });
+    expect(contentInput({}, 'story', false)).not.toHaveProperty(
+      'coverPosition',
+    );
+    for (const coverPosition of [
+      null,
+      [],
+      '{',
+      { x: '20', y: 10 },
+      { x: NaN, y: 10 },
+      { x: -1, y: 10 },
+      { x: 20, y: 101 },
+    ])
+      expect(() => contentInput({ coverPosition }, 'story', false)).toThrow();
+  });
   it('rejects malformed and missing required content', () => {
     expect(() =>
       contentInput({ ...story, serviceLine: '' }, 'story', true),
